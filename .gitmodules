@@ -1,0 +1,3 @@
+[submodule "cs4641b-sum23-project.github.io"]
+	path = site
+	url = git@github.com:CS4641B-Sum23-Project/cs4641b-sum23-project.github.io.git
