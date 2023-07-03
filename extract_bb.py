@@ -33,7 +33,7 @@ def ingest_annotations(training   : str,
   return [pd.read_json(x, orient='records')[columns] for x in (training, validation)]
 
 def extract_bb_images(training_df : pd.DataFrame, validation_df : pd.DataFrame,
-                      save_bb_images : bool = False, add_imgs_to_df : bool = False) -> None:
+                      save_bb_images : bool = False, add_raw_img_to_df : bool = False) -> None:
   """ Extract the images from the bounding boxes defined in the annotations
 
   Args:
@@ -41,6 +41,9 @@ def extract_bb_images(training_df : pd.DataFrame, validation_df : pd.DataFrame,
       validation_df (pd.DataFrame): Validation annotations dataframe
       save_bb_images (bool, optional): If True, save the bounding box images to disk. 
                                        Defaults to False.
+      add_raw_img_to_df (bool, optional): If True, also save the raw image to the dataframe.
+                                          Defaults to False.
+    
   """
   
 
@@ -68,15 +71,15 @@ def extract_bb_images(training_df : pd.DataFrame, validation_df : pd.DataFrame,
           
         cv2.imwrite(ex_out_path, extracted_image)
       
-      if add_imgs_to_df:
+      if add_raw_img_to_df:
         images.append(image)
-        bb_images.append(extracted_image)
+      bb_images.append(extracted_image)
       
     # End Inner Loop
 
-    if add_imgs_to_df:
+    if add_raw_img_to_df:
       df['raw_image'] = images
-      df['bb_image']  = bb_images
+    df['bb_image']  = bb_images
   # End Outer Loop
   
   
