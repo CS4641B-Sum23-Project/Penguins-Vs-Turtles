@@ -1,13 +1,14 @@
 import os
 import img_utls
 import argparse as ap
-import cv2
-import pdb
-def generate_data() -> str:
+from typing import Tuple
+
+from sandbox import enter_sandbox
+def generate_data() -> Tuple:
   """ Generate image data from scratch
 
   Returns:
-      str: output pickle file that contains the generated data
+      Tuple: (output_path, training_df, validation_df)
   """
   print("Creating img_data.pkl")
   output_path, training_df, validation_df = \
@@ -16,28 +17,19 @@ def generate_data() -> str:
   img_utls.save_bounding_box_images(training_df,   img_utls.BB_TRAIN_IMAGES_DIR)
   img_utls.save_bounding_box_images(validation_df, img_utls.BB_VALID_IMAGES_DIR)
 
-  return output_path
+  return output_path, training_df, validation_df
 
-def load_data() -> None:
+def load_data() -> Tuple:
+  """ Load the data from the stored pickle
+
+  Returns:
+      Tuple: (training_df, validation_df)
+  """
   print("Loading img_data.pkl")
   training_df, validation_df = \
     img_utls.load_img_data_pkl(img_utls.IMG_DATA_PKL_PTH)
   
-  
-  # Sandbox testing begin here #
-  print("Exiting load_data()")
-
-  img_utls.resize_images(training_df, (64,64))
-  img_utls.find_contours(training_df)
-  img_utls.find_edges(training_df)
-
-  img = training_df.iloc[0].bb_image.copy()
-  contours = training_df.iloc[0].contours
-  edges = training_df.iloc[0].canny_edges
-  cv2.drawContours(img, contours, -1, (0,255,0), 3)
-  cv2.imshow('Contours', img)
-  cv2.waitKey(0)
-  cv2.destroyAllWindows()
+  return training_df, validation_df
 
 def main() -> int:
   '''
@@ -49,9 +41,11 @@ def main() -> int:
   _args = parser.parse_args()
   regen_data = _args.regenerate
   if regen_data or not os.path.exists(img_utls.IMG_DATA_PKL_PTH):
-    output_pkl_path = generate_data()
+    output_pkl_path, training_df, validation_df = generate_data()
   else:
-    load_data()
+    training_df, validation_df = load_data()
+    
+  enter_sandbox(training_df, validation_df)
   
   print("Done.")
 
