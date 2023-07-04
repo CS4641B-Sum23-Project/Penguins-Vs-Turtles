@@ -267,7 +267,7 @@ def preprocess_images(df : pd.DataFrame) -> pd.DataFrame:
   IMAGE_SIZE = (64,64)
   
   df['64x64'] = resize_images(df, IMAGE_SIZE)
-  df['gray_img'] = create_grayscale_images(df)
+  df['gray_image'] = create_grayscale_images(df)
   
   return df
   
