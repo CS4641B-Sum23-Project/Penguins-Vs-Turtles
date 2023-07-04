@@ -167,7 +167,7 @@ def load_img_data_pkl(path : str) -> Tuple[pd.DataFrame]:
   with open(path, 'rb') as f:
     _dict = pickle.load(f)
 
-  return tuple(_dict.items())
+  return tuple(_dict.values())
   
   
 def main() -> int:
