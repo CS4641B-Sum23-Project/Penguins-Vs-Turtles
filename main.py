@@ -45,6 +45,9 @@ def main() -> int:
   else:
     training_df, validation_df = load_data()
     
+  for df in [training_df, validation_df]:
+    img_utls.preprocess_images(df)
+  
   enter_sandbox(training_df, validation_df)
   
   print("Done.")

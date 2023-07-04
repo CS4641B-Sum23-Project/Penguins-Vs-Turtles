@@ -201,38 +201,74 @@ def find_contours(df : pd.DataFrame) -> pd.DataFrame:
       pd.DataFrame: Dataframe with an added column of contours
   """
   def apply_contours(image : np.ndarray) -> np.ndarray:
-    gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    ret, thresh = cv2.threshold(gray_img, 127, 255, 0)
+    ret, thresh = cv2.threshold(image, 127, 255, 0)
     countours, hierarchy = cv2.findContours(
       thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
     )
     
     return countours
   
-  series_contours = df['bb_image'].apply(apply_contours) 
+  series_contours = df['gray_image'].apply(apply_contours) 
   df['contours'] = series_contours
 
 def find_edges(df : pd.DataFrame) -> pd.DataFrame:
   def apply_canny_edge_detection(image : np.ndarray) -> np.ndarray:
-    gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blur_img = cv2.GaussianBlur(gray_img, (3,3), 0)
-
+    blur_img = cv2.GaussianBlur(image, (3,3), 0)
+    # maybe change thresholds
     edges = cv2.Canny(image=blur_img, threshold1=100, threshold2=200)
     return edges
-  df['canny_edges'] = df['bb_image'].apply(apply_canny_edge_detection)
+
+  df['canny_edges'] = df['gray_image'].apply(apply_canny_edge_detection)
   
 
 def resize_images(df : pd.DataFrame, size : tuple) -> pd.DataFrame:
   """ Resize the images to the defined size
 
   Args:
-      df (pd.DataFrame): _description_
+      df (pd.DataFrame): Training or validation dataframe
       size (tuple): Width x Height for the new shape
 
   Returns:
-      pd.DataFrame: _description_
+      pd.DataFrame: dataframe with bb_images resized
   """
   def apply_resize( img : np.ndarray) -> np.ndarray:
     return cv2.resize(img, size)
   
   df['bb_image'] = df['bb_image'].apply(apply_resize)
+  
+  return df
+
+def create_grayscale_images(df : pd.DataFrame) -> pd.DataFrame:
+  """ Create grayscale images from the bounding box images
+
+  Args:
+      pd (pd.DataFrame): Training or validation dataframe
+
+  Returns:
+      pd.DataFrame: Populated DataFrame
+  """
+  def apply_grayscale(image : np.ndarray) -> np.ndarray:
+    gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return gray_img
+  df['gray_image'] = df.apply(apply_grayscale)
+  
+  return df
+
+def preprocess_images(df : pd.DataFrame) -> pd.DataFrame:
+  """ Preprocess the images with various different filters.
+      Note. This will modify bb_image
+
+  Args:
+      df (pd.DataFrame): Training or validation dataframe
+
+  Returns:
+      pd.DataFrame: Preprocesssed dataframe
+  """
+  IMAGE_SIZE = (64,64)
+  
+  resize_images(df, IMAGE_SIZE)
+  create_grayscale_images(df)
+  
+  return df
+  
+  
