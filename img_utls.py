@@ -209,8 +209,18 @@ def find_contours(df : pd.DataFrame) -> pd.DataFrame:
     
     return countours
   
-  series_contours = df['bb_image'].apply(apply_contours, axis=1) 
-    
+  series_contours = df['bb_image'].apply(apply_contours) 
+  df['contours'] = series_contours
+
+def find_edges(df : pd.DataFrame) -> pd.DataFrame:
+  def apply_canny_edge_detection(image : np.ndarray) -> np.ndarray:
+    gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blur_img = cv2.GaussianBlur(gray_img, (3,3), 0)
+
+    edges = cv2.Canny(image=blur_img, threshold1=100, threshold2=200)
+    return edges
+  df['canny_edges'] = df['bb_image'].apply(apply_canny_edge_detection)
+  
 
 def resize_images(df : pd.DataFrame, size : tuple) -> pd.DataFrame:
   """ Resize the images to the defined size
