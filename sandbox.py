@@ -12,7 +12,7 @@ def enter_sandbox(training_df : pd.DataFrame, validation_df : pd.DataFrame) -> N
 
   Args:
       training_df (pd.DataFrame): training dataframe
-      validation_df (pd.DataFrame): Validation dataframes
+      validation_df (pd.DataFrame): validation dataframe
   """
   print("Entering Sandbox environment")
   pdb.set_trace()
