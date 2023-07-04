@@ -29,7 +29,7 @@ def load_data() -> Tuple:
   print("Loading img_data.pkl")
   training_df, validation_df = \
     img_utls.load_img_data_pkl(img_utls.IMG_DATA_PKL_PTH)
-  
+
   return training_df, validation_df
 
 def main() -> int:
