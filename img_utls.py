@@ -250,7 +250,7 @@ def create_grayscale_images(df : pd.DataFrame) -> pd.DataFrame:
   def apply_grayscale(image : np.ndarray) -> np.ndarray:
     gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     return gray_img
-  df['gray_image'] = df.apply(apply_grayscale)
+  df['gray_image'] = df['bb_image'].apply(apply_grayscale)
   
   return df
 
