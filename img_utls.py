@@ -221,7 +221,7 @@ def find_edges(df : pd.DataFrame) -> pd.DataFrame:
   df['canny_edges'] = df['gray_image'].apply(apply_canny_edge_detection)
   
 
-def resize_images(df : pd.DataFrame, size : tuple) -> pd.DataFrame:
+def resize_images(df : pd.DataFrame, size : tuple) -> pd.Series:
   """ Resize the images to the defined size
 
   Args:
@@ -229,34 +229,34 @@ def resize_images(df : pd.DataFrame, size : tuple) -> pd.DataFrame:
       size (tuple): Width x Height for the new shape
 
   Returns:
-      pd.DataFrame: dataframe with bb_images resized
+      pd.Series: Series of resized images
   """
   def apply_resize( img : np.ndarray) -> np.ndarray:
     return cv2.resize(img, size)
   
-  df['bb_image'] = df['bb_image'].apply(apply_resize)
+  resized_images = df['bb_image'].apply(apply_resize)
   
-  return df
+  return resized_images
+  
 
-def create_grayscale_images(df : pd.DataFrame) -> pd.DataFrame:
+def create_grayscale_images(df : pd.DataFrame) -> pd.Series:
   """ Create grayscale images from the bounding box images
 
   Args:
       pd (pd.DataFrame): Training or validation dataframe
 
   Returns:
-      pd.DataFrame: Populated DataFrame
+      pd.Series: Grayscale Images
   """
   def apply_grayscale(image : np.ndarray) -> np.ndarray:
     gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     return gray_img
-  df['gray_image'] = df['bb_image'].apply(apply_grayscale)
+  grayscale_images = df['bb_image'].apply(apply_grayscale)
   
-  return df
+  return grayscale_images
 
 def preprocess_images(df : pd.DataFrame) -> pd.DataFrame:
   """ Preprocess the images with various different filters.
-      Note. This will modify bb_image
 
   Args:
       df (pd.DataFrame): Training or validation dataframe
@@ -266,8 +266,8 @@ def preprocess_images(df : pd.DataFrame) -> pd.DataFrame:
   """
   IMAGE_SIZE = (64,64)
   
-  resize_images(df, IMAGE_SIZE)
-  create_grayscale_images(df)
+  df['64x64'] = resize_images(df, IMAGE_SIZE)
+  df['gray_img'] = create_grayscale_images(df)
   
   return df
   
