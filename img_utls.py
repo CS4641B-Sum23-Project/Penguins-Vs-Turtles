@@ -38,7 +38,7 @@ def ingest_annotations(training   : str = TRAIN_ANNOTE_PTH,
   return [pd.read_json(x, orient='records')[columns] for x in (training, validation)]
 
 def _save_extracted_image(row : pd.Series, dir : str) -> None:
-  """ This function is meant to be utilizes by a pd.DataFrame.apply
+  """ This function is meant to be utilized by a pd.DataFrame.apply()
       This will save out the extracted images to the relevant output directory
 
   Args:
