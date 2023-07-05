@@ -13,21 +13,18 @@ def plot_PCA(features : np.ndarray) -> None:
 
 def kmeans_centroids(training_df : pd.DataFrame, validation_df : pd.DataFrame) -> None:
    # get data and store in numpy array
-  df = np.empty((len(training_df), 64*64*3))
-  for idx, row in training_df.iterrows():
-    bb_dat = row['bb_image']
-    bb_dat = bb_dat.flatten()
-    df[idx] = bb_dat
-
+  data = np.array(training_df['64x64'].apply(lambda x : x.flatten()).tolist())
+  
   # normalize
-  df = df/255.0
+  data = data/255.0
 
   kmeans = KMeans(n_clusters=2, random_state=0)
-  cluster = kmeans.fit_predict(df)
+  cluster = kmeans.fit_predict(data)
   shape = kmeans.cluster_centers_.shape[1]
   
 
-  x_data = [i for i in range(shape)]
+  x_data = np.arange(shape).tolist()
   plt.scatter(x_data,kmeans.cluster_centers_[0], color='red', alpha=0.2, s=70)
   plt.scatter(x_data,kmeans.cluster_centers_[1], color='blue', alpha=0.2, s=50)
   plt.show()
+  print("")
