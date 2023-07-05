@@ -218,7 +218,7 @@ def find_edges(df : pd.DataFrame) -> pd.DataFrame:
     edges = cv2.Canny(image=blur_img, threshold1=100, threshold2=200)
     return edges
 
-  df['canny_edges'] = df['gray_image'].apply(apply_canny_edge_detection)
+  df['canny_edges'] = df['gray_scaled'].apply(apply_canny_edge_detection)
   
 
 def resize_images(df : pd.DataFrame, size : tuple) -> pd.Series:
@@ -255,6 +255,13 @@ def create_grayscale_images(df : pd.DataFrame) -> pd.Series:
   
   return grayscale_images
 
+def create_grayscale_64(df : pd.DataFrame) -> pd.Series:
+  def apply_grayscale(image : np.ndarray) -> np.ndarray:
+    gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return gray_img
+  grayscale_images = df['64x64'].apply(apply_grayscale)
+  return grayscale_images
+
 def preprocess_images(df : pd.DataFrame) -> pd.DataFrame:
   """ Preprocess the images with various different filters.
 
@@ -267,6 +274,7 @@ def preprocess_images(df : pd.DataFrame) -> pd.DataFrame:
   IMAGE_SIZE = (64,64)
   
   df['64x64'] = resize_images(df, IMAGE_SIZE)
+  df['gray_scaled'] = create_grayscale_64(df)
   df['gray_image'] = create_grayscale_images(df)
   
   return df

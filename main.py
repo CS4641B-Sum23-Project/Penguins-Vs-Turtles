@@ -5,6 +5,8 @@ from typing import Tuple
 
 from sandbox import enter_sandbox
 import feature_extractions as fe
+import visualizations as vis
+
 def generate_data() -> Tuple:
   """ Generate image data from scratch
 
@@ -49,12 +51,15 @@ def main() -> int:
   for df in [training_df, validation_df]:
     img_utls.preprocess_images(df)
   
-  FE = fe.Feature_Extractor(training_df)
-  mobilenet_features = FE.load_mobilenet_features()
+  #FE = fe.Feature_Extractor(training_df)
+  #mobilenet_features = FE.load_mobilenet_features()
   
-  kwargs = {'mobilenet_features' : mobilenet_features}
-  enter_sandbox(training_df, validation_df, **kwargs)
-  
+  #kwargs = {'mobilenet_features' : mobilenet_features}
+  #enter_sandbox(training_df, validation_df, **kwargs)
+
+  #vis.kmeans_centroids(training_df, validation_df)
+  vis.dbscan_on_canny_edges(training_df, validation_df)
+  #vis.dbscan(training_df, validation_df)
   print("Done.")
 
   
