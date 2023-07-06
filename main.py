@@ -50,9 +50,9 @@ def main() -> int:
     img_utls.preprocess_images(df)
   
   FE = fe.Feature_Extractor(training_df)
-  mobilenet_features = FE.load_mobilenet_features()
+  features = FE.load_features()
   
-  kwargs = {'mobilenet_features' : mobilenet_features}
+  kwargs = {'features' : features}
   enter_sandbox(training_df, validation_df, **kwargs)
   
   print("Done.")
