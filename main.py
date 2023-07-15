@@ -3,7 +3,7 @@ import img_utls
 import argparse as ap
 from typing import Tuple
 
-from sandbox import enter_sandbox
+# from sandbox import enter_sandbox
 import feature_extractions as fe
 def generate_data() -> Tuple:
   """ Generate image data from scratch
@@ -53,7 +53,7 @@ def main() -> int:
   mobilenet_features = FE.load_mobilenet_features()
   
   kwargs = {'mobilenet_features' : mobilenet_features}
-  enter_sandbox(training_df, validation_df, **kwargs)
+  # enter_sandbox(training_df, validation_df, **kwargs)
   
   print("Done.")
 
