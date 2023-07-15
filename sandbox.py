@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import visualizations as vis
+import feature_extractions as fe
 
 def edges_and_contours(training_df : pd.DataFrame, validation_df : pd.DataFrame) -> None:
   img_utls.find_contours(training_df)
@@ -36,10 +37,20 @@ def enter_sandbox(training_df : pd.DataFrame, validation_df : pd.DataFrame, **kw
       **kwargs (dict) any aditional parameters for the sandbox
   """
   
-  mobilenet_features = kwargs.get('mobilenet_features')
+  features_dict = kwargs.get('features')
+  bb_features = np.array(features_dict['bb_Mobilenet'].tolist())
+  non_bb_features = np.array(features_dict['Mobilenet'].tolist())
+  HOG = np.array(features_dict['HOG'].apply(lambda x : x.flatten()).tolist())
+  
+  vis.generate_visuals(training_df, validation_df, features_dict)
   print("Entering Sandbox environment")
   #pdb.set_trace()
-
+  vis.plot_Kernel_PCA(HOG, training_df.category_id.to_numpy(), "Kernel_PCA Visualization of HOG Translation", show_plot=True)
+  vis.plot_Kernel_PCA(bb_features, training_df.category_id.to_numpy(), "Kernel_PCA Visualization of MobileNetV2 Bounding Box Features", show_plot=True)
+  vis.plot_Kernel_PCA(non_bb_features, training_df.category_id.to_numpy(), "Kernel_PCA Visualization of MobileNetV2 Non-Bounding Box Features", show_plot=True)
+  vis.plot_PCA(HOG, training_df.category_id.to_numpy(), "PCA Visualization of HOG Translation", show_plot=True)
+  vis.plot_PCA(bb_features, training_df.category_id.to_numpy(), "PCA Visualization of MobileNetV2 Bounding Box Features", show_plot=True)
+  vis.plot_PCA(non_bb_features, training_df.category_id.to_numpy(), "PCA Visualization of MobileNetV2 Non-Bounding Box Features", show_plot=True)
   vis.kmeans_centroids(training_df, validation_df)
 
 
