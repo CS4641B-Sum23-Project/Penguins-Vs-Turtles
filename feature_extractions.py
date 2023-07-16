@@ -9,11 +9,11 @@ import keras.preprocessing.image as image
 import os
 from typing import Tuple
 import pickle
-
+import cv2
 
 
 class Feature_Extractor:
-  mobilenet_features_pkl = os.path.join(img_utls.DATA_DIR, 'mobilnet_features.pkl')
+  features_pickle = os.path.join(img_utls.DATA_DIR, 'features.pkl')
   def __init__(self, df : pd.DataFrame):
     """ This class is manage the different feature extractions
 
@@ -37,11 +37,27 @@ class Feature_Extractor:
       
       return rescaled 
     
-    hog_images = self.df['gray_image'].apply(_apply_hog)
+    resized_gray = self.df['gray_image'].apply(lambda x : cv2.resize(x, (64,64)))
+    hog_images = resized_gray.apply(_apply_hog)
     if modify_df:
       self.df['hog_images'] = hog_images
     
     return hog_images
+  
+  def extract_ORB_features(self, modify_df : bool = False) -> pd.Series:
+    orb = cv2.ORB_create(nfeatures=64*64, scaleFactor=1.2, nlevels=8, edgeThreshold=15)
+    
+    def _apply_orb(image : np.ndarray, orb):
+      points, descr = orb.detectAndCompute(image, None)
+      cvt = cv2.KeyPoint_convert(points)
+      orb_img = np.zeros_like(image, dtype=np.uint8) 
+      for point in cvt:
+        x, y = point
+        orb_img[int(y), int(x)] = 255
+      return orb_img
+    # RGB = self.df['64x64'].apply(lambda x : cv2.cvtColor(x, cv2.COLOR_BGR2RGB))
+    orb_images = self.df['64x64'].apply(lambda x : cv2.cvtColor(x, cv2.COLOR_BGR2GRAY)).apply(_apply_orb, orb=orb)
+    return orb_images
 
   def extract_features_with_mobilenet(self, modify_df : bool = False) -> pd.Series:
     """ Extract Features utilizing mobilenet
@@ -62,13 +78,19 @@ class Feature_Extractor:
       return features.flatten()
     
     _244x244_images = img_utls.resize_images(self.df, (244,244))
+    _244x244_nonBB_images = self.df['raw_image'].apply(lambda x : cv2.resize(x, (244,244)))
+    
     self._load_mobilenet()
     model = self.mobilenet_model
     converted_images = _244x244_images.apply(_convert_to_mobilenet_format)
     
-    features = converted_images.apply(_extract_features, model=model)
+    bb_features = converted_images.apply(_extract_features, model=model)
+    
+    converted_images = _244x244_nonBB_images.apply(_convert_to_mobilenet_format)
+    
+    non_bb_features = converted_images.apply(_extract_features, model=model)
 
-    return features
+    return bb_features, non_bb_features
     
     
   def _load_mobilenet(self) -> None:
@@ -77,29 +99,46 @@ class Feature_Extractor:
                                           (244,244,3), 
                                           include_top=False, 
                                           weights='imagenet')
-  def save_mobilenet_features(self) -> Tuple:
+  def save_features(self) -> Tuple:
     """ Save the mobilenet features to pickle file
 
     Returns:
         Tuple: (filepath, features)
     """
-    with open(self.mobilenet_features_pkl, 'wb') as f:
-      features = self.extract_features_with_mobilenet()
+    with open(self.features_pickle, 'wb') as f:
+      print("Generating ORB Features")
+      orb_features = self.extract_ORB_features()
+      print("Generating mobilenet features")
+      bb_features, non_bb_features = self.extract_features_with_mobilenet()
+      print("Generating HOG Features")
+      hog_features = self.extract_HOG_features()
+      
+      canny_features = img_utls.find_edges(self.df)['canny_edges']
+      contours      = img_utls.find_contours(self.df)['contours']
+      print("Saving Features to pickle")
+      features = {
+        'bb_Mobilenet' : bb_features,
+        'Mobilenet' : non_bb_features,
+        'HOG' : hog_features,
+        'ORB' : orb_features,
+        'edges' : canny_features,
+        'contours' : contours
+      }
       pickle.dump(features, f)
     
-    return self.mobilenet_features_pkl, features
-  def load_mobilenet_features(self) -> np.ndarray:
-    """ Load the mobilenet features that were extracted
+    return self.features_pickle, features
+  def load_features(self) -> dict:
+    """ Load the all features that were extracted
 
     Returns:
-        np.ndarray: Mobilenet features
+        dict: Dictionary of features
     """
-    if not os.path.exists(self.mobilenet_features_pkl):
-      path, features = self.save_mobilenet_features()
-      return features
+    if not os.path.exists(self.features_pickle):
+      path, feature_dict = self.save_features()
+      return feature_dict
     
-    with open(self.mobilenet_features_pkl, 'rb') as f:
-      features = pickle.load(f)
+    with open(self.features_pickle, 'rb') as f:
+      feature_dict = pickle.load(f)
     
-    return features
+    return feature_dict
     
