@@ -3,9 +3,9 @@ from skimage import io, color, exposure
 import numpy as np
 import skimage.feature as ski_feat
 import tensorflow as tf
-import tensorflow.keras.applications as applications
+import keras.applications as applications
 import img_utls
-import tensorflow.keras.preprocessing.image as image
+import keras.preprocessing.image as image
 import os
 from typing import Tuple
 import pickle
