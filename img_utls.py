@@ -110,7 +110,9 @@ def convert_bb_coords(bbox : List[int]) -> Tuple[Tuple]:
   Returns:
       tuple: (Top_left_Coord, Bottom_Right_Coord)
   """
-  
+
+  if (bbox == []):
+    return ((0, 0), (0, 0))
   top_left      = tuple(bbox[:2])
   bottom_right  = (bbox[0] + bbox[2], bbox[1] + bbox[3])
   
@@ -127,6 +129,9 @@ def extract_bb_image(image : np.ndarray, bb : List[int]) -> np.ndarray:
       np.ndarray: Bounding box image
   """
 
+  if (bb == []):
+    return image
+  
   top_left, bottom_right = convert_bb_coords(bb)
 
   # Copy may not be needed if image processing calls returns a
