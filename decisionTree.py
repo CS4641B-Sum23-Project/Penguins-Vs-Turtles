@@ -13,6 +13,9 @@ from main import generate_data, load_data
 import feature_extractions as fe
 import cv2
 
+# pd.set_option('display.max_rows', None)
+pd.set_option('display.max_colwidth', None)
+
 parser = ap.ArgumentParser("Penguins Vs Turtles")
 parser.add_argument('-r', '--regenerate', action='store_true', help='Force regenerate data.pkl files')
 _args = parser.parse_args()
@@ -41,7 +44,6 @@ def convert_features(features) -> Tuple[np.ndarray, np.ndarray]:
     orb_features = feature_dict['ORB']
     edges_features = feature_dict['edges']
     contours = feature_dict['contours']
-
     # Run for bb_features and mobilenet_features
     X_train_bb = pd.DataFrame(bb_features.tolist()).values
     X_train_mobile = pd.DataFrame(mobilenet_features.tolist()).values
@@ -49,6 +51,7 @@ def convert_features(features) -> Tuple[np.ndarray, np.ndarray]:
     # Run for hog_features, orb_features, edges_features
     temp1 = np.array(hog_features.to_list())
     X_train_hog = temp1.reshape(temp1.shape[0], -1)
+    print(hog_features)
 
     temp2 = np.array(orb_features.to_list())
     X_train_orb = temp2.reshape(temp2.shape[0], -1)
@@ -109,15 +112,15 @@ def find_accuracy(X, y):
 
 
 bb, mobile, hog, orb, edges, contours = convert_features(features)
-print("bb")
-find_accuracy(bb, y)
-print("mobile")
-find_accuracy(mobile, y)
-print("hog")
-find_accuracy(hog, y)
-print("orb")
-find_accuracy(orb, y)
-print("edges")
-find_accuracy(edges, y)
-print("contours")
-find_accuracy(contours, y)
+# print("bb")
+# find_accuracy(bb, y)
+# print("mobile")
+# find_accuracy(mobile, y)
+# print("hog")
+# find_accuracy(hog, y)
+# print("orb")
+# find_accuracy(orb, y)
+# print("edges")
+# find_accuracy(edges, y)
+# print("contours")
+# find_accuracy(contours, y)
