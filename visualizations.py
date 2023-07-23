@@ -1,12 +1,14 @@
 import os
+from sklearn.metrics import accuracy_score
 from sklearn.decomposition import PCA, KernelPCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import pandas as pd
 import numpy as np
 
-CLASS_MAP = {1 : 'Penguin', 2 : 'Turtle'}
+CLASS_MAP = {1 : 'Penguin', 2 : 'Turtle', 3 : 'Background'}
 
 
 def plot_PCA(features : np.ndarray, _class : np.ndarray, title : str, save_img_path : str = None,
@@ -57,28 +59,90 @@ def plot_Kernel_PCA(features : np.ndarray, _class : np.ndarray, title : str, sav
   
   return kpca_results
 
+# accuracy functions
+def reference(clusters, data_label):
+  ref_label = {}
+
+  for i in range(len(np.unique(clusters))):
+    index = np.where(clusters == i, 1, 0)
+    tmp = data_label[np.nonzero(index)]
+    num = np.bincount(tmp).argmax()
+    ref_label[i] = num
+  return ref_label
+
+def get_labels(clusters, ref_labels):
+  tmp_labels = np.random.rand(len(clusters))
+  for i in range(len(clusters)):
+    tmp_labels[i] = ref_labels[clusters[i]]
+  return tmp_labels
+
 def kmeans_centroids(training_df : pd.DataFrame, validation_df : pd.DataFrame, 
                      save_img_path : str = None, show_plot : bool = False) -> None:
   
    # get data and store in numpy array
   data = np.array(training_df['64x64'].apply(lambda x : x.flatten()).tolist())
   
+  data_labels = np.array(training_df['category_id'].tolist())
+
   # normalize
   data = data/255.0
 
   kmeans = KMeans(n_clusters=3, random_state=0)
-  cluster = kmeans.fit_predict(data)
+  clusters = kmeans.fit_predict(data)
   shape = kmeans.cluster_centers_.shape[1]
   
-
   x_data = np.arange(shape).tolist()
-  plt.scatter(x_data, kmeans.cluster_centers_[0], color='red', alpha=0.2, s=50)
-  plt.scatter(x_data, kmeans.cluster_centers_[1], color='blue', alpha=0.2, s=50)
-  plt.scatter(x_data, kmeans.cluster_centers_[2], color='green', alpha=0.2, s=50)
+  plt.scatter(x_data, kmeans.cluster_centers_[0], color='red', alpha=0.2, s=50, label = "Penguins")
+  plt.scatter(x_data, kmeans.cluster_centers_[1], color='blue', alpha=0.2, s=50, label = "Turtles")
+  plt.scatter(x_data, kmeans.cluster_centers_[2], color='orange', alpha=0.2, s=50, label = "Background")
+
+  reference_labels = reference(clusters, data_labels)
+  predicted_labels = get_labels(clusters, reference_labels)
+  print(accuracy_score(predicted_labels, data_labels))
+
+  plt.xlabel("# pixels x Channels ")
+  plt.ylabel("Scaled Pixel Color Value")
+  plt.title("KMeans Clustering of Pixel Values")
+  plt.legend()
+
   if save_img_path:
     plt.savefig(save_img_path)
   if show_plot:
     plt.show()
+
+# Define a function to format the y-axis labels using the scaling factor
+def format_y_ticks(tick_value, position):
+    scaled_value = tick_value * 1e-3
+    return f'{scaled_value:.1f}'  # Format to one decimal place
+
+def kmeans_elbow(training_df : pd.DataFrame, validation_df : pd.DataFrame, ) -> None:
+  
+  # get data and store in numpy array
+  data = np.array(training_df['64x64'].apply(lambda x : x.flatten()).tolist())
+  data_labels = np.array(training_df['category_id'].tolist())
+
+  # normalize
+  data = data/255.0
+  
+  sse = []
+  k_test = [2, 3, 4, 16, 64, 128, 256]
+
+  for k in k_test:
+    kmeans = KMeans(n_clusters=k)
+    clusters = kmeans.fit_predict(data)
+    sse.append(kmeans.inertia_)
+    reference_labels = reference(clusters, data_labels)
+    predicted_labels = get_labels(clusters, reference_labels)
+    print(f"Accuracy for k = {k}: ", accuracy_score(predicted_labels, data_labels))
+  
+  ax = plt.gca()
+  ax.yaxis.set_major_formatter(ticker.FuncFormatter(format_y_ticks))
+
+  # Plot sse against k
+  plt.plot(k_test, sse, '-o')
+  plt.xlabel('Number of Clusters (k)')
+  plt.ylabel('Inertia')
+  plt.show()
 
   
 def generate_visuals(training_df : pd.DataFrame, validation_df : pd.DataFrame, features_dict : dict) -> None:
