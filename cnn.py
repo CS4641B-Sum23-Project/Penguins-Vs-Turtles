@@ -8,10 +8,6 @@ Original file is located at
 """
 
 # Commented out IPython magic to ensure Python compatibility.
-#mount google drive
-from google.colab import drive
-drive.mount('/content/drive')
-# %cd /content/drive/MyDrive/Penguins-Vs-Turtles/
 
 #Import dependencies
 import tensorflow as tf
@@ -19,12 +15,13 @@ import os
 import matplotlib.pyplot as plt
 import cv2
 import imghdr
+import numpy as np
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dense, Flatten, Dropout
 from tensorflow.keras.metrics import Precision, Recall, BinaryAccuracy
 from tensorflow.keras.models import load_model
 
-#Will need to edit this later to reflect google path
+#Will need to edit this later to reflect path
 SCRIPT_DIR       = os.path.dirname(os.path.abspath(__file__))
 TRAIN_ANNOTE_PTH = os.path.join(SCRIPT_DIR, 'train_annotations')
 VALID_ANNOTE_PTH = os.path.join(SCRIPT_DIR, 'valid_annotations')
