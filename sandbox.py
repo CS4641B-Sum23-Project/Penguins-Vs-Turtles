@@ -38,9 +38,9 @@ def enter_sandbox(training_df : pd.DataFrame, validation_df : pd.DataFrame, **kw
   """
   
   features_dict = kwargs.get('features')
-  bb_features = np.array(features_dict['bb_Mobilenet'].tolist())
-  non_bb_features = np.array(features_dict['Mobilenet'].tolist())
-  HOG = np.array(features_dict['HOG'].apply(lambda x : x.flatten()).tolist())
+  bb_features = np.array(features_dict['t_bb_Mobilenet'].tolist())
+  non_bb_features = np.array(features_dict['t_Mobilenet'].tolist())
+  HOG = np.array(features_dict['t_HOG'].apply(lambda x : x.flatten()).tolist())
   
   vis.generate_visuals(training_df, validation_df, features_dict)
   print("Entering Sandbox environment")

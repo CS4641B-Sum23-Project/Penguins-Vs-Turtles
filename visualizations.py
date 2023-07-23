@@ -86,11 +86,11 @@ def generate_visuals(training_df : pd.DataFrame, validation_df : pd.DataFrame, f
   if not os.path.isdir(plots_dir):
     os.makedirs(plots_dir, exist_ok=True)
   
-  bb_features = np.array(features_dict['bb_Mobilenet'].tolist())
-  non_bb_features = np.array(features_dict['Mobilenet'].tolist())
-  HOG = np.array(features_dict['HOG'].apply(lambda x : x.flatten()).tolist())
-  ORB = np.array(features_dict['ORB'].apply(lambda x : x.flatten()).tolist())
-  edges = np.array(features_dict['edges'].apply(lambda x : x.flatten()).tolist())
+  bb_features = np.array(features_dict['t_bb_Mobilenet'].tolist())
+  non_bb_features = np.array(features_dict['t_Mobilenet'].tolist())
+  HOG = np.array(features_dict['t_HOG'].apply(lambda x : x.flatten()).tolist())
+  ORB = np.array(features_dict['t_ORB'].apply(lambda x : x.flatten()).tolist())
+  edges = np.array(features_dict['t_edges'].apply(lambda x : x.flatten()).tolist())
   # contours = np.array(features_dict['contours'].apply(lambda x : x.flatten()).tolist())
   
   results = {}

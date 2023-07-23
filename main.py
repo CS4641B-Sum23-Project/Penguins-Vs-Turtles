@@ -49,7 +49,7 @@ def main() -> int:
   for df in [training_df, validation_df]:
     img_utls.preprocess_images(df)
   
-  FE = fe.Feature_Extractor(training_df)
+  FE = fe.Feature_Extractor(training_df, validation_df)
   features = FE.load_features()
   
   kwargs = {'features' : features}

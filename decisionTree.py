@@ -12,6 +12,10 @@ import img_utls
 from main import generate_data, load_data
 import feature_extractions as fe
 import cv2
+import pdb
+from random_forest import RandomForest
+import multiprocessing as mp
+import pickle
 
 parser = ap.ArgumentParser("Penguins Vs Turtles")
 parser.add_argument('-r', '--regenerate', action='store_true', help='Force regenerate data.pkl files')
@@ -25,10 +29,8 @@ for df in [training_df, validation_df]:
     img_utls.preprocess_images(df)
 FE = fe.Feature_Extractor(training_df)
 features = FE.load_features()
-# Get labels from train_annotations
-with open("train_annotations",'r') as file:
-    data = json.load(file)
-y = [obj["category_id"] for obj in data]
+
+y = training_df['category_id'].to_numpy()
 
 def convert_features(features) -> Tuple[np.ndarray, np.ndarray]:
     # Existing code to load the features dictionary
@@ -87,7 +89,10 @@ def convert_features(features) -> Tuple[np.ndarray, np.ndarray]:
     })    
     scaler = MinMaxScaler()
     X_train_contours = scaler.fit_transform(features_df)
-    return X_train_bb, X_train_mobile, X_train_hog, X_train_orb, X_train_edges, X_train_contours
+    
+    gray = training_df['64x64'].apply(lambda x : cv2.cvtColor(x, cv2.COLOR_BGR2GRAY).flatten()).tolist()
+
+    return X_train_bb, X_train_mobile, X_train_hog, X_train_orb, X_train_edges, X_train_contours, gray
 
 
 def find_accuracy(X, y):
@@ -108,7 +113,49 @@ def find_accuracy(X, y):
     print("Accuracy:", accuracy)
 
 
-bb, mobile, hog, orb, edges, contours = convert_features(features)
+
+def mobile_net_bb_hp(X, y) -> None:
+    _args = []
+    A = np.arange(3, 16)
+    B = np.arange(3, 16)
+    C = np.arange(.3, 1.025, .025)
+    
+    X,Y,Z= np.meshgrid(A, B, C)
+    iterator = np.nditer([X,Y,Z])
+    _args = []
+    
+    for x in iterator:
+        _args.append((int(x[0]), int(x[1]), float(x[2])))
+    results = []
+
+    num_proc = mp.cpu_count() - 2
+    fit_RF(_args[0])
+    pool = mp.Pool(processes=num_proc)
+    results = pool.map(fit_RF, _args)
+    results = sorted(results, key=lambda x:x[0])
+    results = results[::-1]
+    
+    with open('mobile_net_bb_rf.pkl', 'wb') as f:
+        pickle.dump(results, f)
+
+    
+def fit_RF(my_tuple : tuple) -> float:
+
+    (estimators, max_depth, max_features) = my_tuple
+    RF = RandomForest(int(estimators), int(max_depth), float(max_features), random_seed=(4641 + 7641))
+    RF.fit(X_train, y_train)
+    acc = RF.OOB_score(X_test, y_test)
+
+    return [acc, estimators, max_depth, max_features]
+
+
+bb, mobile, hog, orb, edges, contours, gray = convert_features(features)
+X_train, X_test, y_train, y_test = train_test_split(bb, y, test_size=0.2, random_state=42)
+
+mobile_net_bb_hp(bb, y)
+
+print("grayscale")
+find_accuracy(gray, y)
 print("bb")
 find_accuracy(bb, y)
 print("mobile")
