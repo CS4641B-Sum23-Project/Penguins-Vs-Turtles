@@ -2,6 +2,7 @@ from typing import Tuple
 import json
 import os
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
 from sklearn import tree
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, recall_score, precision_score 
@@ -17,6 +18,7 @@ from random_forest import RandomForest
 import multiprocessing as mp
 import pickle
 from scipy import stats
+import glob
 
 parser = ap.ArgumentParser("Penguins Vs Turtles")
 parser.add_argument('-r', '--regenerate', action='store_true', help='Force regenerate data.pkl files')
@@ -33,7 +35,34 @@ features = FE.load_features()
 
 y_train = training_df['category_id'].to_numpy()
 y_test = validation_df['category_id'].to_numpy()
+x_train = None
+x_test = None
 
+def make_plots() -> None:
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    output_dir = os.path.join(cur_dir, 'plots', 'DecisionTrees')
+    os.makedirs(output_dir, exist_ok=True)
+    RF_pickles = glob.glob('data/Random_Forest*.pkl')
+    DT_pickles = glob.glob('data/Decision_Trees*.pkl')
+    
+    RF_data = {}
+    DT_data = {}
+    for path in RF_pickles:
+        name = os.path.basename(path).split('.')[0].split('Forest_')[1]
+        with open(path, 'rb') as f:
+            data = pickle.load(f)
+        RF_data[name] = data
+    for path in DT_pickles:
+        name = os.path.basename(path).split('.')[0].split('Tree_')[1]
+        with open(path, 'rb') as f:
+            data = pickle.load(f)
+        DT_data[name] = data
+
+    
+    pdb.set_trace()
+
+    
+        
 def convert_features(features) -> Tuple[np.ndarray, np.ndarray]:
     # Existing code to load the features dictionary
     feature_dict = features
@@ -171,7 +200,7 @@ def mobile_net_bb_hp_rf() -> None:
     _args = []
     
     for x in iterator:
-        _args.append((int(x[0]), int(x[1]), float(x[2]), t_bb, y_train, v_bb, y_test))
+        _args.append((int(x[0]), int(x[1]), float(x[2])))
     results = []
 
     num_proc = mp.cpu_count() - 2
@@ -187,46 +216,45 @@ def mobile_net_bb_hp_rf() -> None:
     
 def fit_RF(my_tuple : tuple) -> float:
 
-    (estimators, max_depth, max_features,
-        x_t, y_t, x_v, y_v) = my_tuple
+    (estimators, max_depth, max_features, x_train, x_test) = my_tuple
     RF = RandomForest(int(estimators), int(max_depth), float(max_features), random_seed=(4641 + 7641))
-    RF.fit(x_t, y_t)
-    acc = RF.OOB_score(x_v, y_v)
+    RF.fit(x_train, y_train)
+    oob = RF.OOB_score(x_test, y_test)
     predictions = RF._all_predicitions
 
     y_pred = np.array(stats.mode(predictions, axis=1, nan_policy='omit',keepdims=False)[0]).flatten().astype(int)
 
-    acc2 = accuracy_score(y_v, y_pred)
-    prec = precision_score(y_v, y_pred, average='micro')
-    recall = recall_score(y_v, y_pred, average='micro')
-    return [acc,acc2, prec, recall, estimators, max_depth, max_features]
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, average='micro')
+    recall = recall_score(y_test, y_pred, average='micro')
+    return [oob ,acc, prec, recall, estimators, max_depth, max_features]
 
 def fit_DT(my_tuple: tuple) -> float:
     """ Tuple of estimators, max_depth, max_feature
     """
-    
-    (max_depth, max_features,
-        x_t, y_t, x_v, y_v) = my_tuple
+
+    (max_depth, max_features, x_train, x_test) = my_tuple
     
     DT = tree.DecisionTreeClassifier(max_depth=int(max_depth), max_features=float(max_features))
-    DT.fit(x_t, y_t)
-    y_pred = DT.predict(x_v)
+    DT.fit(x_train, y_train)
+    y_pred = DT.predict(x_test)
     
-    acc = accuracy_score(y_v, y_pred)
-    prec = precision_score(y_v, y_pred, average='micro')
-    recall = recall_score(y_v, y_pred, average='micro')
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, average='micro')
+    recall = recall_score(y_test, y_pred, average='micro')
+        
 
     return [acc, prec, recall, max_depth, max_features]
 
 t_bb, t_mobile, t_hog, t_orb, t_edges, t_contours, t_gray, \
 v_bb, v_mobile, v_hog, v_orb, v_edges, v_contours, v_gray, \
     = convert_features(features)
-
+train_features = [t_bb, t_mobile, t_hog, t_orb, t_edges, t_contours, t_gray]
+valid_features = [v_bb, v_mobile, v_hog, v_orb, v_edges, v_contours, v_gray]
+names = ['mobile_net_bounding_box', 'mobile_net_no_bounding_box', 'hog_filters',
+        'orb_features', 'canny_edges', 'contours', 'grayscale']
 def find_Decision_Tree_HP() -> None:
-    train_features = [t_bb, t_mobile, t_hog, t_orb, t_edges, t_contours, t_gray]
-    valid_features = [v_bb, v_mobile, v_hog, v_orb, v_edges, v_contours, v_gray]
-    names = ['mobile_net_bounding_box', 'mobile_net_no_bounding_box', 'hog_filters',
-            'orb_features', 'canny_edges', 'contours', 'grayscale']
+    
     column_names = ['accuracy', 'precision', 'recall', 'max_depth', 'max_features']
     Max_Depths = np.arange(3, 16)
     Max_Features = np.arange(.3, 1.024,np.float64(.025), dtype=np.float64)
@@ -243,10 +271,14 @@ def find_Decision_Tree_HP() -> None:
     if processes < 1:
         processes = 1
     pool = mp.Pool(processes=processes)
-    for x_train, x_test, name in zip(train_features[::-1], valid_features[::-1], names[::-1]):
+    for x_train1, x_test1, name in zip(train_features[::-1], valid_features[::-1], names[::-1]):
+
+        path = "data/Decision_Tree_" + name + ".pkl"
+        if os.path.exists(path):
+            continue
         _args = []
         for x in Depth_Plus_Max_Features:
-            _args.append(x + [x_train, y_train, x_test, y_test])
+            _args.append(x + [x_train1, x_test1])
         print("Running Decision Tree: " + name)
         results = pool.map(fit_DT, _args)
         print("## Finished running Decision Tree: " + name)
@@ -260,10 +292,8 @@ def find_Random_Forest_HP() -> None:
     v1_contours = v_contours.copy()
     t1_contours[np.isnan(t1_contours)] = 0.0
     v1_contours[np.isnan(v1_contours)] = 0.0
-    train_features = [t_bb, t_mobile, t_hog, t_orb, t_edges, t1_contours, t_gray]
-    valid_features = [v_bb, v_mobile, v_hog, v_orb, v_edges, v1_contours, v_gray]
-    names = ['mobile_net_bounding_box', 'mobile_net_no_bounding_box', 'hog_filters',
-            'orb_features', 'canny_edges', 'contours', 'grayscale']
+    train_features = [t_bb,  t_mobile, t_hog, t_orb, t_edges, t1_contours, t_gray]
+    valid_features = [v_bb,  v_mobile, v_hog, v_orb, v_edges, v1_contours, v_gray]
     column_names = ['OOB_accuracy','accuracy', 'precision', 'recall', 'estimators', 'max_depth', 'max_features']
     Max_Depths = np.arange(3, 16)
     Estimators = np.arange(3, 16)
@@ -281,12 +311,20 @@ def find_Random_Forest_HP() -> None:
     if processes < 1:
         processes = 1
     pool = mp.Pool(processes=processes)
-
-    for x_train, x_test, name in zip(train_features[::-1], valid_features[::-1], names[::-1]):
+    global x_train
+    global x_test
+    for x_train1, x_test1, name in zip(train_features[::-1], valid_features[::-1], names[::-1]):
+        x_train = x_train1
+        x_test = x_test1
+        path = "data/Random_Forest_" + name + ".pkl"
+        if os.path.exists(path):
+            continue
         _args = []
         for x in Depth_Plus_Max_Features:
-            _args.append(x + [x_train, y_train, x_test, y_test])
+            _args.append(x + [x_train1, x_test1])
         print("Running Random Forest: " + name)
+        results = []
+        res = fit_RF(_args[0])
         results = pool.map(fit_RF, _args)
         print("##Finished running Random Forest: " + name)
         with open("data/Random_Forest_" + name + ".pkl", 'wb') as f:
@@ -294,10 +332,12 @@ def find_Random_Forest_HP() -> None:
             pickle.dump(df, f)
     pool.close()
 
-find_Random_Forest_HP()
-find_Decision_Tree_HP()
-
 #mobile_net_bb_hp_rf()
+find_Decision_Tree_HP()
+find_Random_Forest_HP()
+make_plots()
+
+
 
 print("grayscale")
 find_accuracy(t_gray, y_train, v_gray, y_test)
