@@ -19,6 +19,7 @@ import multiprocessing as mp
 import pickle
 from scipy import stats
 import glob
+from sklearn.decomposition import KernelPCA
 
 parser = ap.ArgumentParser("Penguins Vs Turtles")
 parser.add_argument('-r', '--regenerate', action='store_true', help='Force regenerate data.pkl files')
@@ -62,7 +63,6 @@ def make_plots() -> None:
     pdb.set_trace()
 
     
-        
 def convert_features(features) -> Tuple[np.ndarray, np.ndarray]:
     # Existing code to load the features dictionary
     feature_dict = features
@@ -246,6 +246,72 @@ def fit_DT(my_tuple: tuple) -> float:
 
     return [acc, prec, recall, max_depth, max_features]
 
+def fit_RF(my_tuple : tuple) -> float:
+
+    (estimators, max_depth, max_features, x_train, x_test) = my_tuple
+    RF = RandomForest(int(estimators), int(max_depth), float(max_features), random_seed=(4641 + 7641))
+    RF.fit(t_bb, y_train)
+    oob = RF.OOB_score(b, y_test)
+    predictions = RF._all_predicitions
+
+    y_pred = np.array(stats.mode(predictions, axis=1, nan_policy='omit',keepdims=False)[0]).flatten().astype(int)
+
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, average='micro')
+    recall = recall_score(y_test, y_pred, average='micro')
+    return [oob ,acc, prec, recall, estimators, max_depth, max_features]
+
+def fit_RF1(my_tuple : tuple) -> float:
+    pdb.set_trace()
+    (estimators, max_depth, max_features) = my_tuple
+    RF = RandomForest(int(estimators), int(max_depth), float(max_features), random_seed=(4641 + 7641))
+    RF.fit(kpca_results_train, y_train)
+    oob = RF.OOB_score(kpca_results_valid, y_test)
+    predictions = RF._all_predicitions
+
+    y_pred = np.array(stats.mode(predictions, axis=1, nan_policy='omit',keepdims=False)[0]).flatten().astype(int)
+
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, average='macro')
+    recall = recall_score(y_test, y_pred, average='macro')
+    return [oob ,acc, prec, recall, estimators, max_depth, max_features]
+
+
+def fit_DT(my_tuple: tuple) -> float:
+    """ Tuple of estimators, max_depth, max_feature
+    """
+
+    (max_depth, max_features, x_train, x_test) = my_tuple
+    
+    DT = tree.DecisionTreeClassifier(max_depth=int(max_depth), max_features=float(max_features))
+    DT.fit(x_train, y_train)
+    y_pred = DT.predict(x_test)
+    
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, average='micro')
+    recall = recall_score(y_test, y_pred, average='micro')
+        
+
+    return [acc, prec, recall, max_depth, max_features]
+
+def fit_DT1(my_tuple: tuple) -> float:
+    """ Tuple of estimators, max_depth, max_feature
+    """
+
+    (max_depth, max_features) = my_tuple
+    
+    DT = tree.DecisionTreeClassifier(max_depth=int(max_depth), max_features=float(max_features))
+    DT.fit(kpca_results_train, y_train)
+    y_pred = DT.predict(kpca_results_valid)
+    
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, average='micro')
+    recall = recall_score(y_test, y_pred, average='micro')
+        
+
+    return [acc, prec, recall, max_depth, max_features]
+
+
 t_bb, t_mobile, t_hog, t_orb, t_edges, t_contours, t_gray, \
 v_bb, v_mobile, v_hog, v_orb, v_edges, v_contours, v_gray, \
     = convert_features(features)
@@ -331,8 +397,62 @@ def find_Random_Forest_HP() -> None:
             df = pd.DataFrame(results, columns=column_names)
             pickle.dump(df, f)
     pool.close()
+# Max_Depths = np.arange(3, 16)
+# Estimators = np.arange(3, 16)
+# Max_Features = np.arange(.3, 1.024,np.float64(.025), dtype=np.float64)
+# X,Y,Z= np.meshgrid(Estimators, Max_Depths, Max_Features)
+# iterator = np.nditer([X,Y,Z])
+# Depth_Plus_Max_Features = []
+# for x in iterator:
+#     if x[2] >= 1.0:
+#         Depth_Plus_Max_Features.append([int(x[0]), int(x[1]),1.0])
+#     else:
+#         Depth_Plus_Max_Features.append([int(x[0]), int(x[1]), float(x[2])])
 
 #mobile_net_bb_hp_rf()
+KPCA = KernelPCA(n_components=10, kernel='rbf', gamma=None)
+kpca_results_train = KPCA.fit_transform(t_bb)
+kpca_results_valid = KPCA.fit_transform(v_bb)
+_args = []
+A = np.arange(3, 16)
+B = np.arange(3, 16)
+C = np.arange(.3, 1.025, .025)
+
+X,Y,Z= np.meshgrid(A, B, C)
+iterator = np.nditer([X,Y,Z])
+_args1 = []
+_args2 = []
+for x in iterator:
+    if x[2] >= 1.0:
+        _args1.append((int(x[0]), int(x[1]),1.0))
+    else:
+        _args1.append((int(x[0]), int(x[1]), float(x[2])))
+    
+X,Y= np.meshgrid(A, C)
+iterator = np.nditer([X,Y])
+for x in iterator:
+    if x[1] >= 1.0:
+        _args2.append((int(x[0]),1.0))
+    else:
+        _args2.append((int(x[0]), float(x[1])))
+results = []
+
+num_proc = mp.cpu_count() - 6
+#fit_RF1(_args1[0])
+pool = mp.Pool(processes=num_proc)
+# results = pool.map(fit_RF1, _args1)
+column_names = ['accuracy', 'precision', 'recall', 'max_depth', 'max_features']
+
+# with open('mobile_net_bb_rf_KPCA.pkl', 'wb') as f:
+#     df = pd.DataFrame(results, columns=column_names)
+#     pickle.dump(df, f)
+# pool.close()
+# pool = mp.Pool(processes=num_proc)
+results = pool.map(fit_DT1, _args2)
+with open('mobile_net_bb_dt_KPCA.pkl', 'wb') as f:
+    df = pd.DataFrame(results, columns=column_names)
+    pickle.dump(df, f)
+
 find_Decision_Tree_HP()
 find_Random_Forest_HP()
 make_plots()
