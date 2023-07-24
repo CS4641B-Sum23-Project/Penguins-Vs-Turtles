@@ -81,7 +81,7 @@ class Feature_Extractor:
     def _extract_features(tensor : tf.Tensor, model : tf.keras.Model) -> np.ndarray:
       features = model.predict(tensor)
       return features.flatten()
-    import pdb; pdb.set_trace()
+
     _244x244_t_images = img_utls.resize_images(self.t_df, (244,244))
     _244x244_t_nonBB_images = self.t_df['raw_image'].apply(lambda x : cv2.resize(x, (244,244)))
     
