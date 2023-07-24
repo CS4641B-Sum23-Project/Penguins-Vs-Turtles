@@ -12,7 +12,7 @@ import img_utls
 from main import generate_data, load_data
 import feature_extractions as fe
 import cv2
-import pdb
+#import pdb
 from random_forest import RandomForest
 import multiprocessing as mp
 import pickle
@@ -33,7 +33,8 @@ features = FE.load_features()
 
 y_train = training_df['category_id'].to_numpy()
 y_test = validation_df['category_id'].to_numpy()
-
+x_train = None
+x_test = None
 def convert_features(features) -> Tuple[np.ndarray, np.ndarray]:
     # Existing code to load the features dictionary
     feature_dict = features
@@ -187,34 +188,32 @@ def mobile_net_bb_hp_rf() -> None:
     
 def fit_RF(my_tuple : tuple) -> float:
 
-    (estimators, max_depth, max_features,
-        x_t, y_t, x_v, y_v) = my_tuple
+    (estimators, max_depth, max_features) = my_tuple
     RF = RandomForest(int(estimators), int(max_depth), float(max_features), random_seed=(4641 + 7641))
-    RF.fit(x_t, y_t)
-    acc = RF.OOB_score(x_v, y_v)
+    RF.fit(x_train, y_train)
+    acc = RF.OOB_score(x_test, y_test)
     predictions = RF._all_predicitions
 
     y_pred = np.array(stats.mode(predictions, axis=1, nan_policy='omit',keepdims=False)[0]).flatten().astype(int)
 
-    acc2 = accuracy_score(y_v, y_pred)
-    prec = precision_score(y_v, y_pred, average='micro')
-    recall = recall_score(y_v, y_pred, average='micro')
+    acc2 = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, average='micro')
+    recall = recall_score(y_test, y_pred, average='micro')
     return [acc,acc2, prec, recall, estimators, max_depth, max_features]
 
 def fit_DT(my_tuple: tuple) -> float:
     """ Tuple of estimators, max_depth, max_feature
     """
     
-    (max_depth, max_features,
-        x_t, y_t, x_v, y_v) = my_tuple
+    (max_depth, max_features) = my_tuple
     
     DT = tree.DecisionTreeClassifier(max_depth=int(max_depth), max_features=float(max_features))
-    DT.fit(x_t, y_t)
-    y_pred = DT.predict(x_v)
+    DT.fit(x_train, y_train)
+    y_pred = DT.predict(x_test)
     
-    acc = accuracy_score(y_v, y_pred)
-    prec = precision_score(y_v, y_pred, average='micro')
-    recall = recall_score(y_v, y_pred, average='micro')
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred, average='micro')
+    recall = recall_score(y_test, y_pred, average='micro')
 
     return [acc, prec, recall, max_depth, max_features]
 
@@ -243,7 +242,14 @@ def find_Decision_Tree_HP() -> None:
     if processes < 1:
         processes = 1
     pool = mp.Pool(processes=processes)
-    for x_train, x_test, name in zip(train_features[::-1], valid_features[::-1], names[::-1]):
+    global x_train
+    global x_test
+    for x_train1, x_test1, name in zip(train_features[::-1], valid_features[::-1], names[::-1]):
+        x_train = x_train1
+        x_test = x_test1
+        path = "data/Decision_Tree_" + name + ".pkl"
+        if os.path.exists(path):
+            continue
         _args = []
         for x in Depth_Plus_Max_Features:
             _args.append(x + [x_train, y_train, x_test, y_test])
@@ -260,8 +266,8 @@ def find_Random_Forest_HP() -> None:
     v1_contours = v_contours.copy()
     t1_contours[np.isnan(t1_contours)] = 0.0
     v1_contours[np.isnan(v1_contours)] = 0.0
-    train_features = [t_bb, t_mobile, t_hog, t_orb, t_edges, t1_contours, t_gray]
-    valid_features = [v_bb, v_mobile, v_hog, v_orb, v_edges, v1_contours, v_gray]
+    train_features = [t_bb,  t_mobile, t_hog, t_orb, t_edges, t1_contours, t_gray]
+    valid_features = [v_bb,  v_mobile, v_hog, v_orb, v_edges, v1_contours, v_gray]
     names = ['mobile_net_bounding_box', 'mobile_net_no_bounding_box', 'hog_filters',
             'orb_features', 'canny_edges', 'contours', 'grayscale']
     column_names = ['OOB_accuracy','accuracy', 'precision', 'recall', 'estimators', 'max_depth', 'max_features']
@@ -281,13 +287,24 @@ def find_Random_Forest_HP() -> None:
     if processes < 1:
         processes = 1
     pool = mp.Pool(processes=processes)
-
-    for x_train, x_test, name in zip(train_features[::-1], valid_features[::-1], names[::-1]):
+    global x_train
+    global x_test
+    for x_train1, x_test1, name in zip(train_features[::-1], valid_features[::-1], names[::-1]):
+        x_train = x_train1
+        x_test = x_test1
+        path = "data/Random_Forest_" + name + ".pkl"
+        if os.path.exists(path):
+            continue
         _args = []
         for x in Depth_Plus_Max_Features:
-            _args.append(x + [x_train, y_train, x_test, y_test])
+            _args.append(x)
         print("Running Random Forest: " + name)
-        results = pool.map(fit_RF, _args)
+        results = []
+        for arg in _args:
+            print(f"Running: {arg[:3]}")
+            res = fit_RF(arg)
+            results.append(res)
+        #results = pool.map(fit_RF, _args)
         print("##Finished running Random Forest: " + name)
         with open("data/Random_Forest_" + name + ".pkl", 'wb') as f:
             df = pd.DataFrame(results, columns=column_names)
