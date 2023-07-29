@@ -1,6 +1,7 @@
 import os
 import img_utls
 import argparse as ap
+import svm
 from typing import Tuple
 
 from sandbox import enter_sandbox
@@ -49,6 +50,9 @@ def main() -> int:
   for df in [training_df, validation_df]:
     img_utls.preprocess_images(df)
   
+  svm.run_svm(training_df, validation_df)
+  
+  '''
   FE = fe.Feature_Extractor(training_df, validation_df)
   features = FE.load_features()
   
@@ -57,7 +61,7 @@ def main() -> int:
   
   print("Done.")
 
-  
+  '''
   return 0
 
 if __name__ == '__main__':
